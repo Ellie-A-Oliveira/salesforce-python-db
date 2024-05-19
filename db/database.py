@@ -24,11 +24,20 @@ def connect():
     return False, None, None
 
 
-def select(db_inst, table_name, fields, where=None):
+def select(db_inst, table_name, fields, where=None, join=None, order_by=None, group_by=None):
     query = f"SELECT {fields} FROM {table_name}"
+    
+    if join:
+        query += f" {join}"
     
     if where:
         query += f" WHERE {where}"
+        
+    if order_by:
+        query += f" ORDER BY {order_by}"
+        
+    if group_by:
+        query += f" GROUP BY {group_by}"
     
     db_inst.execute(query)
     return db_inst.fetchall()

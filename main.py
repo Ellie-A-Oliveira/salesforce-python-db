@@ -16,7 +16,7 @@ from helper.safe_input import safe_input
 from helper.should_continue import should_continue
 from helper.create_crud import gerar_crud
 
-from db.database import connect
+from db.database import connect, select
 
 all_models = [
     Cliente,
@@ -85,6 +85,45 @@ def listar_crud(tipo_crud):
         _continue = should_continue()
 
 
+def mostrar_relatorios(db_inst):
+    _continue = 1
+    while _continue == 1:
+        print("Opções:\n1-RELATÓRIO COM CLASSIFICAÇÃO DE DADOS\n2-RELATÓRIO COM FUNÇÃO NUMÉRICA\n3-RELATÓRIO COM FUNÇÃO DE GRUPO\n4-RELATÓRIO COM SUBCONSULTA\n5-RELATÓRIO COM JUNÇÃO DE TABELAS\n0-SAIR\n")
+        opcao = safe_input("Digite a opção que deseja: ", int)
+
+        match opcao:
+            case 1:
+                print(select(db_inst,
+                             "tipo_plano",
+                             "tipo_plano_id, tipo_plano_nome, tipo_plano_preco",
+                             order_by="3"))
+            case 2:
+                print(select(db_inst,
+                             "produto",
+                             "count(prod_id) \"TOTAL PRODUTOS ATIVOS\", round(AVG(prod_preco),2) \"PRECO MEDIO\", SUM(prod_preco) \"SOMA PRECOS\"", 
+                             where="prod_status = 'Ativo'", 
+                             group_by="1"))
+            case 3:
+                print(select(db_inst, 
+                             "funcionario", 
+                             "round(avg(func_salario),2) \"MEDIA SALARIO FUNCIONARIO\""))
+            case 4:
+                print(select(db_inst, 
+                             "funcionario", "func_id \"ID FUNCIONARIO\", func_nome \"NOME FUNCIONARIO\", func_salario \"SALARIO FUNCIONARIO\"", 
+                             where="func_salario in (select max(func_salario) from funcionario)"))
+            case 5:
+                print(select(db_inst, 
+                             "empresa", 
+                             "func_nome \"FUNCIONARIO NOME\", func_sobrenome \"FUNCIONARIO SOBRENOME\", empresa_nome \"EMPRESA NOME\", clie_nome \"CLIENTE NOME\", clie_sobrenome \"CLIENTE EMPRESA\"",
+                             join="inner join cliente on cliente.clie_id = empresa.fk_cliente_id inner join emp_func_atende on emp_func_atende.fk_empresa_atende_func = empresa.empresa_id inner join funcionario on funcionario.func_id = emp_func_atende.fk_funcionario_atende_emp"))
+            case 0:
+                break
+            case _:
+                print("Opção inválida!")
+
+        _continue = should_continue()
+
+
 def main():
     has_connection, db_inst, conn = connect()
     if not has_connection:
@@ -101,7 +140,9 @@ def main():
             numero_opcao = i + 1
             print(f"{numero_opcao}-{crud.name}")
 
-        opcao = safe_input("\nDigite o CRUD desejado: ", int)
+        print(f"{len(cruds) + 1}-Acessar relatórios customizados\n")
+
+        opcao = safe_input("\nDigite o CRUD ou opção desejada: ", int)
         idx_crud_selecionado = next(
             filter(
                 lambda idx_campo: idx_campo == opcao - 1,
@@ -113,6 +154,8 @@ def main():
         if idx_crud_selecionado is not None:
             crud = cruds[idx_crud_selecionado]
             listar_crud(crud)
+        elif opcao == len(cruds) + 1:
+            mostrar_relatorios(db_inst)
         else:
             print("Opção inválida!")
 
